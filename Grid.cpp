@@ -1,55 +1,161 @@
 #include "Grid.h"
 
-using namespace std;
-
 Grid::Grid() {
-    loadDefaultMap();
+    // Empty construct, initialized by GameEngine loadLevel
 }
 
-void Grid::loadDefaultMap() {
-    vector<string> defaultMap = {
-        "###########",
-        "#R...#...E#",
-        "#.#.#.#.#.#",
-        "#...V.....#",
-        "#.###.#.#.#",
-        "#.....#...#",
-        "#.#.#.#.#.#",
-        "#...#.....#",
-        "#.#.#.###.#",
-        "#...#...P.#",
-        "###########"
-    };
+void Grid::loadLevel(int difficulty) {
+    initialPolicePos.clear();
+    initialCCTVPos.clear();
 
-    height = defaultMap.size();
-    width = defaultMap[0].size();
-    map.resize(height, vector<char>(width));
-
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            char cell = defaultMap[y][x];
-            if (cell == 'R') { initialRobberPos = {x, y}; map[y][x] = '.'; }
-            else if (cell == 'P') { initialPolicePos = {x, y}; map[y][x] = '.'; }
-            else { map[y][x] = cell; }
-            if (cell == 'V') vaultPos = {x, y};
-            else if (cell == 'E') exitPos = {x, y};
+    if (difficulty == 1) { // Easy
+        depth = 1; height = 11; width = 11;
+        map.assign(depth, vector<vector<char>>(height, vector<char>(width, '.')));
+        
+        vector<string> floor1 = {
+            "###########",
+            "#R...#...E#",
+            "#.#.#.#.#.#",
+            "#...V.....#",
+            "#.###.#.#.#",
+            "#.....#...#",
+            "#.#.#.#.#.#",
+            "#...#.....#",
+            "#.#.#.###.#",
+            "#...#...P.#",
+            "###########"
+        };
+        for(int y=0; y<height; ++y) {
+            for(int x=0; x<width; ++x) {
+                char c = floor1[y][x];
+                if (c == 'R') { initialRobberPos = {x, y, 0}; map[0][y][x] = '.'; }
+                else if (c == 'P') { initialPolicePos.push_back({x, y, 0}); map[0][y][x] = '.'; }
+                else if (c == 'C') { initialCCTVPos.push_back({x, y, 0}); map[0][y][x] = '.'; }
+                else if (c == 'V') { vaultPos = {x, y, 0}; map[0][y][x] = 'V'; }
+                else if (c == 'E') { exitPos = {x, y, 0}; map[0][y][x] = 'E'; }
+                else { map[0][y][x] = c; }
+            }
+        }
+    } 
+    else if (difficulty == 2) { // Normal
+        depth = 2; height = 11; width = 11;
+        map.assign(depth, vector<vector<char>>(height, vector<char>(width, '.')));
+        
+        vector<string> floor1 = {
+            "###########",
+            "#R...#...U#",
+            "#.#.#.#.#.#",
+            "#.........#",
+            "#.###.#.#.#",
+            "#...C.#...#",
+            "#.#.#.#.#.#",
+            "#...#.....#",
+            "#.#.#.###.#",
+            "#...#C..P.#",
+            "###########"
+        };
+        vector<string> floor2 = {
+            "###########",
+            "#V...#...D#",
+            "#.#.#.#.#.#",
+            "#.........#",
+            "#.###.#.#.#",
+            "#.....#...#",
+            "#.#.#.#.#C#",
+            "#...#.....#",
+            "#.#.#.###.#",
+            "#E..#...P.#",
+            "###########"
+        };
+        
+        vector<vector<string>> floors = {floor1, floor2};
+        for(int z=0; z<depth; ++z) {
+            for(int y=0; y<height; ++y) {
+                for(int x=0; x<width; ++x) {
+                    char c = floors[z][y][x];
+                    if (c == 'R') { initialRobberPos = {x, y, z}; map[z][y][x] = '.'; }
+                    else if (c == 'P') { initialPolicePos.push_back({x, y, z}); map[z][y][x] = '.'; }
+                    else if (c == 'C') { initialCCTVPos.push_back({x, y, z}); map[z][y][x] = '.'; }
+                    else if (c == 'V') { vaultPos = {x, y, z}; map[z][y][x] = 'V'; }
+                    else if (c == 'E') { exitPos = {x, y, z}; map[z][y][x] = 'E'; }
+                    else { map[z][y][x] = c; }
+                }
+            }
+        }
+    }
+    else { // Hard
+        depth = 3; height = 11; width = 11;
+        map.assign(depth, vector<vector<char>>(height, vector<char>(width, '.')));
+        vector<string> floor1 = {
+            "###########",
+            "#R...#...U#",
+            "#C#.#.#.#.#",
+            "#.........#",
+            "#.###.#.#.#",
+            "#.....#..P#",
+            "#.#.#.#.#.#",
+            "#...#...C.#",
+            "#.#.#.###.#",
+            "#.........#",
+            "###########"
+        };
+        vector<string> floor2 = {
+            "###########",
+            "#....#...D#",
+            "#.#.#.#.#.#",
+            "#...P.....#",
+            "#.###.#.#U#",
+            "#...C.#...#",
+            "#.#.#.#.#.#",
+            "#...#.....#",
+            "#.#.#.###.#",
+            "#.........#",
+            "###########"
+        };
+        vector<string> floor3 = {
+            "###########",
+            "#V...#....#",
+            "#.#.#.#.#.#",
+            "#C........#",
+            "#.###.#.#D#",
+            "#.....#...#",
+            "#.#.#C#.#.#",
+            "#...#...P.#",
+            "#.#.#.###.#",
+            "#E........#",
+            "###########"
+        };
+        vector<vector<string>> floors = {floor1, floor2, floor3};
+        for(int z=0; z<depth; ++z) {
+            for(int y=0; y<height; ++y) {
+                for(int x=0; x<width; ++x) {
+                    char c = floors[z][y][x];
+                    if (c == 'R') { initialRobberPos = {x, y, z}; map[z][y][x] = '.'; }
+                    else if (c == 'P') { initialPolicePos.push_back({x, y, z}); map[z][y][x] = '.'; }
+                    else if (c == 'C') { initialCCTVPos.push_back({x, y, z}); map[z][y][x] = '.'; }
+                    else if (c == 'V') { vaultPos = {x, y, z}; map[z][y][x] = 'V'; }
+                    else if (c == 'E') { exitPos = {x, y, z}; map[z][y][x] = 'E'; }
+                    else { map[z][y][x] = c; }
+                }
+            }
         }
     }
 }
 
-bool Grid::isWall(int x, int y) const {
-    if (!isValid(x, y)) return true;
-    return map[y][x] == '#';
+bool Grid::isWall(int x, int y, int z) const {
+    if (!isValid(x, y, z)) return true;
+    return map[z][y][x] == '#';
 }
 
-bool Grid::isValid(int x, int y) const {
-    return x >= 0 && x < width && y >= 0 && y < height;
+bool Grid::isValid(int x, int y, int z) const {
+    return x >= 0 && x < width && y >= 0 && y < height && z >= 0 && z < depth;
 }
 
-char Grid::getCell(int x, int y) const {
-    if (!isValid(x, y)) return '#';
-    return map[y][x];
+char Grid::getCell(int x, int y, int z) const {
+    if (!isValid(x, y, z)) return '#';
+    return map[z][y][x];
 }
 
-int Grid::getWidth() const { return width; }
-int Grid::getHeight() const { return height; }
+void Grid::setCell(int x, int y, int z, char c) {
+    if (isValid(x, y, z)) map[z][y][x] = c;
+}

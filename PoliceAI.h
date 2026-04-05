@@ -2,14 +2,19 @@
 #define POLICEAI_H
 
 #include "Agent.h"
+#include "AStar.h"
 
-using namespace std;
+enum class AIState { PATROL, ALERT, CHASE };
 
 class PoliceAI : public Agent {
 public:
-    PoliceAI(Position startPos) : Agent(startPos) {}
+    AIState state;
+    Position lastKnownTarget;
 
-    void moveTowards(Position target, const Grid& grid);
+    PoliceAI();
+    PoliceAI(Position startPos);
+    
+    bool takeTurn(Position targetPos, bool isAlerted, Position alertPos, const Grid& grid);
 };
 
 #endif

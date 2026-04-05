@@ -1,22 +1,30 @@
 #include "Robber.h"
-#include <iostream>
 
-using namespace std;
+Robber::Robber() : Agent({0, 0, 0}), hasVault(false) {}
 
-bool Robber::move(char input, const Grid& grid) {
+Robber::Robber(Position startPos) : Agent(startPos), hasVault(false) {}
+
+bool Robber::move(char direction, const Grid& grid) {
     Position nextPos = pos;
 
-    if (input == 'w') nextPos.y--;
-    else if (input == 's') nextPos.y++;
-    else if (input == 'a') nextPos.x--;
-    else if (input == 'd') nextPos.x++;
-    else return false;
+    if (direction == 'w') nextPos.y--;
+    else if (direction == 's') nextPos.y++;
+    else if (direction == 'a') nextPos.x--;
+    else if (direction == 'd') nextPos.x++;
+    else if (direction == 'u') { // go UP stairs
+        if (grid.getCell(pos.x, pos.y, pos.z) == 'U' && grid.isValid(pos.x, pos.y, pos.z + 1) && !grid.isWall(pos.x, pos.y, pos.z + 1)) {
+            nextPos.z++;
+        }
+    }
+    else if (direction == 'j') { // go DOWN stairs
+        if (grid.getCell(pos.x, pos.y, pos.z) == 'D' && grid.isValid(pos.x, pos.y, pos.z - 1) && !grid.isWall(pos.x, pos.y, pos.z - 1)) {
+            nextPos.z--;
+        }
+    }
 
-    if (grid.isValid(nextPos.x, nextPos.y) && !grid.isWall(nextPos.x, nextPos.y)) {
+    if (!grid.isWall(nextPos.x, nextPos.y, nextPos.z)) {
         pos = nextPos;
         return true;
-    } else {
-        cout << "Invalid move: wall detected\n";
-        return false;
     }
+    return false;
 }

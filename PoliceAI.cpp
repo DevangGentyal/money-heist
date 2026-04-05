@@ -1,19 +1,34 @@
 #include "PoliceAI.h"
-#include "AStar.h"
-#include <iostream>
+#include <cstdlib>
 
-using namespace std;
+PoliceAI::PoliceAI() : Agent({0, 0, 0}), state(AIState::PATROL), lastKnownTarget({0,0,0}) {}
 
-void PoliceAI::moveTowards(Position target, const Grid& grid) {
-    vector<Position> path = AStar::findPath(pos, target, grid);
+PoliceAI::PoliceAI(Position startPos) : Agent(startPos), state(AIState::PATROL), lastKnownTarget(startPos) {}
 
-    if (!path.empty()) {
-        pos = path[0]; // Move one step along the path
-        cout << "\n  [✓] Best node selected -> (" << pos.x << "," << pos.y << ")\n";
-        cout << "  [➡️] Police actually moves to (" << pos.x << "," << pos.y << ")\n";
-        cout << "-----------------------------------\n";
-    } else {
-        cout << "\n  [!] Police is stuck! No path found to (" << target.x << "," << target.y << ")\n";
-        cout << "-----------------------------------\n";
+bool PoliceAI::takeTurn(Position targetPos, bool isAlerted, Position alertPos, const Grid& grid) {
+    if (isAlerted) {
+        state = AIState::ALERT;
+        lastKnownTarget = alertPos;
     }
+    
+    // Check if adjacent to catch early
+    if (abs(pos.x - targetPos.x) + abs(pos.y - targetPos.y) + abs(pos.z - targetPos.z) <= 1) {
+        pos = targetPos; // Catch!
+        return true;
+    }
+
+    Position goal = targetPos;
+    
+    // In Hard Mode, we can keep the Alert mechanic (Moving 2 steps instead of 1)
+    // But behaviorally, they should ALWAYS hunt using A* Pathfinding.
+    state = AIState::CHASE; 
+
+    // AStar CHASE or ALERT routing
+    std::vector<Position> path = AStar::findPath(pos, goal, grid);
+    if (!path.empty()) {
+        pos = path[0];
+        return true;
+    }
+
+    return false;
 }

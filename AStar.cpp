@@ -1,85 +1,74 @@
 #include "AStar.h"
+#include <cmath>
 #include <algorithm>
-#include <iostream>
 
 using namespace std;
 
 int AStar::calculateManhattan(Position p1, Position p2) {
-    return abs(p1.x - p2.x) + abs(p1.y - p2.y);
+    // 3D Manhattan: distance on floor + cost to switch floors (z diff). Floor switch is usually longer.
+    return abs(p1.x - p2.x) + abs(p1.y - p2.y) + abs(p1.z - p2.z) * 5;
 }
 
 vector<Position> AStar::findPath(Position start, Position goal, const Grid& grid) {
-    priority_queue<Node, vector<Node>, greater<Node>> openList;
-    map<pair<int, int>, Position> parentMap;
-    map<pair<int, int>, int> gScore;
+    priority_queue<Node, vector<Node>, greater<Node>> openSet;
+    map<Position, Position> cameFrom;
+    map<Position, int> gScore;
 
-    openList.push({start, 0, calculateManhattan(start, goal), calculateManhattan(start, goal)});
-    gScore[{start.x, start.y}] = 0;
+    openSet.push({start, 0, calculateManhattan(start, goal), calculateManhattan(start, goal)});
+    gScore[start] = 0;
 
-    cout << "\n--- AI Decision Process ---\n";
-    cout << "Evaluating available options (successors):\n";
+    int dx[] = {0, 0, -1, 1};
+    int dy[] = {-1, 1, 0, 0};
 
-    while (!openList.empty()) {
-        Node current = openList.top();
-        openList.pop();
-
-        bool isStartNode = (current.pos == start);
+    while (!openSet.empty()) {
+        Node current = openSet.top();
+        openSet.pop();
 
         if (current.pos == goal) {
             vector<Position> path;
-            Position step = goal;
-            while (!(step == start)) {
-                path.push_back(step);
-                step = parentMap[{step.x, step.y}];
+            Position curr = goal;
+            while (curr != start) {
+                path.push_back(curr);
+                if (cameFrom.find(curr) == cameFrom.end()) break;
+                curr = cameFrom[curr];
             }
             reverse(path.begin(), path.end());
             return path;
         }
 
-        // Neighbors: up, down, left, right
-        int dx[] = {0, 0, -1, 1};
-        int dy[] = {-1, 1, 0, 0};
-
-        bool loggedCurrent = false;
-
+        vector<Position> neighbors;
+        
+        // Horizontal neighbors
         for (int i = 0; i < 4; ++i) {
-            Position neighbor = {current.pos.x + dx[i], current.pos.y + dy[i]};
+            Position neighborPos = {current.pos.x + dx[i], current.pos.y + dy[i], current.pos.z};
+            if (!grid.isWall(neighborPos.x, neighborPos.y, neighborPos.z)) {
+                neighbors.push_back(neighborPos);
+            }
+        }
+        
+        // Vertical neighbors (Stairs)
+        char currentCell = grid.getCell(current.pos.x, current.pos.y, current.pos.z);
+        if (currentCell == 'U') {
+            if (grid.isValid(current.pos.x, current.pos.y, current.pos.z + 1) && !grid.isWall(current.pos.x, current.pos.y, current.pos.z + 1)) {
+                neighbors.push_back({current.pos.x, current.pos.y, current.pos.z + 1});
+            }
+        } else if (currentCell == 'D') {
+            if (grid.isValid(current.pos.x, current.pos.y, current.pos.z - 1) && !grid.isWall(current.pos.x, current.pos.y, current.pos.z - 1)) {
+                neighbors.push_back({current.pos.x, current.pos.y, current.pos.z - 1});
+            }
+        }
 
-            if (grid.isValid(neighbor.x, neighbor.y) && !grid.isWall(neighbor.x, neighbor.y)) {
-                int tentativeG = current.g + 1;
-
-                if (gScore.find({neighbor.x, neighbor.y}) == gScore.end() || tentativeG < gScore[{neighbor.x, neighbor.y}]) {
-                    parentMap[{neighbor.x, neighbor.y}] = current.pos;
-                    gScore[{neighbor.x, neighbor.y}] = tentativeG;
-                    int h = calculateManhattan(neighbor, goal);
-                    int f = tentativeG + h;
-                    openList.push({neighbor, tentativeG, h, f});
-
-                    // Debug Logging ONLY for the Police's immediate options
-                    if (isStartNode) {
-                        cout << "  Option (" << neighbor.x << "," << neighbor.y << ")\n";
-                        cout << "  g = " << tentativeG << " | h = " << h << " | f = " << f << "\n";
-                        cout << "  Grid Preview:\n";
-                        for (int y = 0; y < grid.getHeight(); ++y) {
-                            cout << "    ";
-                            for (int x = 0; x < grid.getWidth(); ++x) {
-                                Position current_pos = {x, y};
-                                if (current_pos == goal) {
-                                    cout << 'R';
-                                } else if (current_pos == neighbor) {
-                                    cout << 'P';
-                                } else {
-                                    cout << grid.getCell(x, y);
-                                }
-                            }
-                            cout << "\n";
-                        }
-                        cout << "\n";
-                    }
-                }
+        for (Position& neighbor : neighbors) {
+            int tentative_gScore = gScore[current.pos] + 1;
+            
+            if (gScore.find(neighbor) == gScore.end() || tentative_gScore < gScore[neighbor]) {
+                gScore[neighbor] = tentative_gScore;
+                int fScore = tentative_gScore + calculateManhattan(neighbor, goal);
+                openSet.push({neighbor, tentative_gScore, calculateManhattan(neighbor, goal), fScore});
+                cameFrom[neighbor] = current.pos;
             }
         }
     }
 
-    return {}; // No path found
+    return {}; // Empty path if not found
 }

@@ -11,7 +11,7 @@ using namespace std;
 struct Node {
     Position pos;
     int g; // Cost from start
-    int h; // Heuristic (Manhattan distance)
+    int h; // Heuristic
     int f; // g + h
 
     bool operator>(const Node& other) const {

@@ -4,65 +4,114 @@
 
 using namespace std;
 
-GameEngine::GameEngine() 
-    : robber(grid.getInitialRobberPos()), 
-      police(grid.getInitialPolicePos()), 
-      turnNumber(1), 
-      gameRunning(true) {}
+GameEngine::GameEngine() : turnNumber(0), gameRunning(true), difficulty(1), systemAlerted(false), alertPos({0,0,0}), gameStatusMessage("Game Started!") {}
 
-void GameEngine::run() {
-    while (gameRunning) {
-        processTurn();
+void GameEngine::setDifficulty(int diff) {
+    difficulty = diff;
+    grid.loadLevel(difficulty);
+    robber = Robber(grid.initialRobberPos);
+    
+    policeList.clear();
+    for (Position p : grid.initialPolicePos) {
+        policeList.push_back(PoliceAI(p));
+    }
+    
+    cctvList.clear();
+    for (Position p : grid.initialCCTVPos) {
+        cctvList.push_back(CCTV(p));
     }
 }
 
-void GameEngine::processTurn() {
-    GridDisplay::print(grid, robber.getPosition(), police.getPosition(), robber.hasVault(), turnNumber);
-
-    char move;
-    bool validMove = false;
-    while (!validMove) {
-        cout << "Your move (w/a/s/d): ";
-        cin >> move;
-        validMove = robber.move(move, grid);
+void GameEngine::run() {
+    GridDisplay::clearScreen();
+    while (gameRunning) {
+        GridDisplay::print(*this);
+        char input;
+        cin >> input;
+        if (input == 'q') {
+            gameRunning = false;
+            cout << "\033[33mYou voluntarily aborted the heist.\033[0m\n";
+            break;
+        }
+        processTurn(input);
     }
-
-    // Check if robber collected vault
-    if (robber.getPosition() == grid.getVaultPos() && !robber.hasVault()) {
-        robber.collectVault();
-        cout << "Vault collected!\n";
+    
+    // Final game over screen
+    GridDisplay::print(*this);
+    cout << "\n";
+    if (gameStatusMessage.find("Win") != string::npos) {
+        cout << "\033[32m\033[1m";
+        cout << "***************************************************\n";
+        cout << "*                                                 *\n";
+        cout << "*               MISSION ACCOMPLISHED              *\n";
+        cout << "*        YOU ESCAPED WITH THE VAULT SECURED!      *\n";
+        cout << "*                                                 *\n";
+        cout << "***************************************************\n";
+        cout << "\033[0m\n";
+    } else if (gameStatusMessage.find("Lose") != string::npos) {
+        cout << "\033[31m\033[1m";
+        cout << "***************************************************\n";
+        cout << "*                                                 *\n";
+        cout << "*                 MISSION FAILED                  *\n";
+        cout << "*       YOU WERE APPREHENDED BY THE AI POLICE     *\n";
+        cout << "*                                                 *\n";
+        cout << "***************************************************\n";
+        cout << "\033[0m\n";
     }
+}
 
-    // Check win condition after robber move
+void GameEngine::processTurn(char input) {
+    if (!robber.move(input, grid)) {
+        gameStatusMessage = "Invalid move! Hit a wall or couldn't use stairs.";
+        return; 
+    }
+    
+    turnNumber++;
+    gameStatusMessage = "Robber Moved.";
+    
+    if (grid.vaultPos == robber.pos && !robber.hasVault) {
+        robber.hasVault = true;
+        gameStatusMessage = "Vault Collected! Head to the nearest EXIT (E)!";
+    }
+    
     checkWinConditions();
     if (!gameRunning) return;
 
-    // Police move
-    police.moveTowards(robber.getPosition(), grid);
-
-    // Check win condition after police move
-    checkWinConditions();
+    systemAlerted = false;
+    for (auto& cctv : cctvList) {
+        cctv.updateTurn();
+        if (cctv.isSpotted(robber.pos, grid)) {
+            systemAlerted = true;
+            alertPos = robber.pos;
+            gameStatusMessage = "⚠️ CCTV ALERT! Police dispatching to your location! ⚠️";
+        }
+    }
     
-    turnNumber++;
+    for (auto& police : policeList) {
+        int moves = (systemAlerted || police.state == AIState::ALERT) ? 2 : 1;
+        for (int i=0; i<moves; i++) {
+            police.takeTurn(robber.pos, systemAlerted, alertPos, grid);
+            checkWinConditions();
+            if (!gameRunning) {
+                GridDisplay::print(*this);
+                return;
+            }
+        }
+    }
 }
 
 void GameEngine::checkWinConditions() {
-    Position robberPos = robber.getPosition();
-    Position policePos = police.getPosition();
-
-    // Police wins
-    if (robberPos == policePos) {
-        GridDisplay::print(grid, robberPos, policePos, robber.hasVault(), turnNumber);
-        cout << "\nGAME OVER: The Police caught the Robber!\n";
+    if (robber.pos == grid.exitPos && robber.hasVault) {
+        gameStatusMessage = "🎉 YOU ESCAPED! You Win! 🎉";
         gameRunning = false;
         return;
     }
-
-    // Robber wins
-    if (robber.hasVault() && robberPos == grid.getExitPos()) {
-        GridDisplay::print(grid, robberPos, policePos, robber.hasVault(), turnNumber);
-        cout << "\nCONGRATULATIONS: The Robber escaped with the loot!\n";
-        gameRunning = false;
-        return;
+    
+    for (const auto& police : policeList) {
+        if (robber.pos == police.getPosition()) {
+            gameStatusMessage = "❌ CAUGHT! Or BUSTED! You Lose! ❌";
+            gameRunning = false;
+            return;
+        }
     }
 }

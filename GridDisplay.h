@@ -1,14 +1,12 @@
 #ifndef GRIDDISPLAY_H
 #define GRIDDISPLAY_H
 
-#include "Grid.h"
-#include <iostream>
-
-using namespace std;
+#include "GameEngine.h"
 
 class GridDisplay {
 public:
-    static void print(const Grid& grid, Position robberPos, Position policePos, bool vaultCollected, int turn);
+    static void clearScreen();
+    static void print(const GameEngine& engine);
 };
 
 #endif
