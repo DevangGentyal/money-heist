@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 echo "🧹 Cleaning old build outputs..."
-rm -f heist_gui
+rm -f heist_gui heist_game_ai
 
 echo ""
 echo "🔁 Rebuilding GUI from scratch..."

@@ -1,0 +1,198 @@
+{
+  "agent": "Police3",
+  "state": "PATROL",
+  "currentCell": [5, 6, 0],
+  "targetCell": [7, 8, 0],
+  "goalStack": [
+    {
+      "expression": "MOVE(Police3, Robber)",
+      "isOperator": true,
+      "operatorName": "MOVE",
+      "status": "ACTIVE",
+      "preconditions": ["sameFloor(Police3, Robber)", "pathAvailable(Police3, Robber)"],
+      "effects": ["Police3.pos=Robber.pos"]
+    },
+    {
+      "expression": "catch(Police3, Robber)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "PENDING",
+      "preconditions": [],
+      "effects": []
+    }
+  ],
+  "completedGoals": [
+    {
+      "expression": "sameFloor(Police3, Vault)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "pathAvailable(Police3, Vault)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "MOVE(Police3, Vault)",
+      "isOperator": true,
+      "operatorName": "MOVE",
+      "status": "COMPLETED",
+      "preconditions": ["sameFloor(Police3, Vault)", "pathAvailable(Police3, Vault)"],
+      "effects": ["Police3.pos=Vault.pos"]
+    },
+    {
+      "expression": "sameFloor(Police3, Alert)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "pathAvailable(Police3, Alert)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "MOVE(Police3, Alert)",
+      "isOperator": true,
+      "operatorName": "MOVE",
+      "status": "COMPLETED",
+      "preconditions": ["sameFloor(Police3, Alert)", "pathAvailable(Police3, Alert)"],
+      "effects": ["Police3.pos=Alert.pos"]
+    },
+    {
+      "expression": "respond(Police3, Alert)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "sameFloor(Police3, Robber)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "pathAvailable(Police3, Robber)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    }
+  ],
+  "cancelledGoals": [
+    {
+      "expression": "stayHalt(Police3)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "CANCELLED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "protect(Police3,Downstairs)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "CANCELLED",
+      "preconditions": ["sameFloor(Police3, 1)", "pathAvailable(Police3, 1)"],
+      "effects": []
+    },
+    {
+      "expression": "protect(Police3, Vault)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "CANCELLED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "protect(Police3, Vault)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "CANCELLED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "MOVE(Police3, Vault)",
+      "isOperator": true,
+      "operatorName": "MOVE",
+      "status": "CANCELLED",
+      "preconditions": ["sameFloor(Police3, Vault)", "pathAvailable(Police3, Vault)"],
+      "effects": ["Police3.pos=Vault.pos"]
+    },
+    {
+      "expression": "pathAvailable(Police3, Vault)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "CANCELLED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "sameFloor(Police3, Vault)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "CANCELLED",
+      "preconditions": [],
+      "effects": []
+    }
+  ],
+  "astarSuccessors": [
+    {
+      "label": "[4,5,0]",
+      "pos": [4, 5, 0],
+      "g": 1,
+      "h": 7,
+      "f": 8,
+      "chosen": false
+    },
+    {
+      "label": "[6,5,0]",
+      "pos": [6, 5, 0],
+      "g": 1,
+      "h": 4,
+      "f": 5,
+      "chosen": false
+    },
+    {
+      "label": "[5,4,0]",
+      "pos": [5, 4, 0],
+      "g": 1,
+      "h": 7,
+      "f": 8,
+      "chosen": false
+    },
+    {
+      "label": "[5,6,0]",
+      "pos": [5, 6, 0],
+      "g": 1,
+      "h": 4,
+      "f": 5,
+      "chosen": true
+    }
+  ],
+  "chosenNode": {
+    "label": "[5,6,0]",
+    "pos": [5, 6, 0],
+    "g": 1,
+    "h": 4,
+    "f": 5
+  },
+  "activeGoalType": "CHASE_ROBBER"
+}

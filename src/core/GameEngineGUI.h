@@ -12,14 +12,20 @@
 #include <vector>
 #include <memory>
 
+#ifdef __APPLE__
+#include <sys/types.h>
+#endif
+
 using namespace std;
 
-enum class PlayerRole {
+enum class PlayerRole
+{
     ROBBER,
     POLICE
 };
 
-enum class GameStatus {
+enum class GameStatus
+{
     RUNNING,
     ROBBER_WON,
     ROBBER_ESCAPED_NO_VAULT,
@@ -27,7 +33,8 @@ enum class GameStatus {
     QUIT
 };
 
-class GameEngineGUI {
+class GameEngineGUI
+{
 private:
     static constexpr int gridStartX = 20;
     static constexpr int gridStartY = 20;
@@ -40,7 +47,7 @@ private:
     unique_ptr<PredictionEngine> predictor;
     unique_ptr<RuleEngine> rules;
     unique_ptr<RaylibRenderer> renderer;
-    
+
     PlayerRole playerRole;
     int difficulty;
     int turnCount;
@@ -51,15 +58,22 @@ private:
     string popupMessage;
     int policeBoostTurnsRemaining;
     bool policeDoubleStepActive;
-    
+    pid_t debugWindowPid;
+    string debugSnapshotPath;
+    vector<string> debugSnapshotPaths;
+    // track robber last position to detect first-move-on-floor events
+    Position lastRobberPos;
+    // track multiple debug windows per police (optional)
+    vector<pid_t> debugWindowPids;
+
     // Input tracking
     Position hoveredCell;
     bool hasHoveredCell;
-    
+
 public:
     GameEngineGUI();
     ~GameEngineGUI();
-    
+
     // Game flow
     void initialize(int diff, PlayerRole role);
     void run();
@@ -69,18 +83,23 @@ public:
     void checkWinConditions();
     void updateAI();
     bool processRobberFirstTurnInPoliceMode();
+    string buildDebugSnapshot() const;
+    string buildDebugSnapshotForPolice(int idx) const;
+    void spawnDebugWindow();
+    void stopDebugWindow();
 
-    bool tryMovePlayer(const Position& targetPos);
-    bool isControllableMoveValid(const Position& targetPos) const;
+    bool tryMovePlayer(const Position &targetPos);
+    bool isControllableMoveValid(const Position &targetPos) const;
     bool arePoliceFloorChangesAllowed() const;
-    bool shouldPoliceTransitionFloors(const Position& policePos) const;
+    bool shouldPoliceTransitionFloors(const Position &policePos) const;
     void syncControlledPoliceToRobberFloor();
     Position getMouseGridPosition() const;
     Position getPlayerPosition() const;
-    void setPlayerPosition(const Position& newPos);
-    bool isPoliceOnCell(const Position& pos) const;
+    void setPlayerPosition(const Position &newPos);
+    bool isPoliceOnCell(const Position &pos) const;
     void refreshVaultCollectionState();
-    
+    void spawnDebugWindowForPolice(int index, const string &path);
+
     // Getters
     GameStatus getGameStatus() const { return gameStatus; }
     string getStatusMessage() const { return statusMessage; }

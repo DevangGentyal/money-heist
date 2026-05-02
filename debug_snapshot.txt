@@ -1,0 +1,262 @@
+{
+  "agent": "Police",
+  "state": "PATROL",
+  "currentCell": [5, 6, 0],
+  "targetCell": [10, 10, 2],
+  "goalStack": [
+    {
+      "expression": "MOVE(Police1, Robber)",
+      "isOperator": true,
+      "operatorName": "MOVE",
+      "status": "ACTIVE",
+      "preconditions": ["sameFloor(Police1, Robber)", "pathAvailable(Police1, Robber)"],
+      "effects": ["Police1.pos=Robber.pos"]
+    },
+    {
+      "expression": "catch(Police1, Robber)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "PENDING",
+      "preconditions": [],
+      "effects": []
+    }
+  ],
+  "completedGoals": [
+    {
+      "expression": "stayHalt(Police1)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "sameFloor(Police1, Upstairs)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "pathAvailable(Police1, Upstairs)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "MOVE(Police1, Upstairs)",
+      "isOperator": true,
+      "operatorName": "MOVE",
+      "status": "COMPLETED",
+      "preconditions": ["sameFloor(Police1, Upstairs)", "pathAvailable(Police1, Upstairs)"],
+      "effects": []
+    },
+    {
+      "expression": "protect(Police1, Upstairs)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "sameFloor(Police1, Alert)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "pathAvailable(Police1, Alert)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "MOVE(Police1, Alert)",
+      "isOperator": true,
+      "operatorName": "MOVE",
+      "status": "COMPLETED",
+      "preconditions": ["sameFloor(Police1, Alert)", "pathAvailable(Police1, Alert)"],
+      "effects": ["Police1.pos=Alert.pos"]
+    },
+    {
+      "expression": "respond(Police1, Alert)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "sameFloor(Police1, Upstairs)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "pathAvailable(Police1, Upstairs)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "MOVE(Police1, Upstairs)",
+      "isOperator": true,
+      "operatorName": "MOVE",
+      "status": "COMPLETED",
+      "preconditions": ["sameFloor(Police1, Upstairs)", "pathAvailable(Police1, Upstairs)"],
+      "effects": []
+    },
+    {
+      "expression": "protect(Police1, Upstairs)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "sameFloor(Police1, Upstairs)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "pathAvailable(Police1, Upstairs)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "MOVE(Police1, Upstairs)",
+      "isOperator": true,
+      "operatorName": "MOVE",
+      "status": "COMPLETED",
+      "preconditions": ["sameFloor(Police1, Upstairs)", "pathAvailable(Police1, Upstairs)"],
+      "effects": ["Police1.floor+=1"]
+    },
+    {
+      "expression": "sameFloor(Police1, Upstairs)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "pathAvailable(Police1, Upstairs)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "MOVE(Police1, Upstairs)",
+      "isOperator": true,
+      "operatorName": "MOVE",
+      "status": "COMPLETED",
+      "preconditions": ["sameFloor(Police1, Upstairs)", "pathAvailable(Police1, Upstairs)"],
+      "effects": ["Police1.floor+=1"]
+    },
+    {
+      "expression": "sameFloor(Police1, Downstairs)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "pathAvailable(Police1, Downstairs)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "MOVE(Police1, Downstairs)",
+      "isOperator": true,
+      "operatorName": "MOVE",
+      "status": "COMPLETED",
+      "preconditions": ["sameFloor(Police1, Downstairs)", "pathAvailable(Police1, Downstairs)"],
+      "effects": ["Police1.floor-=1"]
+    },
+    {
+      "expression": "sameFloor(Police1, Robber)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "pathAvailable(Police1, Robber)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    }
+  ],
+  "cancelledGoals": [
+  ],
+  "astarSuccessors": [
+    {
+      "label": "[4,5,0]",
+      "pos": [4, 5, 0],
+      "g": 1,
+      "h": 7,
+      "f": 8,
+      "chosen": false
+    },
+    {
+      "label": "[6,5,0]",
+      "pos": [6, 5, 0],
+      "g": 1,
+      "h": 4,
+      "f": 5,
+      "chosen": false
+    },
+    {
+      "label": "[5,4,0]",
+      "pos": [5, 4, 0],
+      "g": 1,
+      "h": 7,
+      "f": 8,
+      "chosen": false
+    },
+    {
+      "label": "[5,6,0]",
+      "pos": [5, 6, 0],
+      "g": 1,
+      "h": 4,
+      "f": 5,
+      "chosen": true
+    }
+  ],
+  "chosenNode": {
+    "label": "[5,6,0]",
+    "pos": [5, 6, 0],
+    "g": 1,
+    "h": 4,
+    "f": 5
+  },
+  "activeGoalType": "CHASE_ROBBER"
+}

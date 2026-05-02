@@ -40,7 +40,7 @@ cd "$(dirname "$0")"
 build_tag=$(date '+%Y-%m-%d %H:%M:%S %Z')
 
 echo "🧹 Removing old GUI binary..."
-rm -f heist_gui
+rm -f heist_gui heist_game_ai debug_window
 
 echo ""
 echo "🔨 Compiling GUI version..."
@@ -54,6 +54,7 @@ clang++ -std=c++17 -Wall -Wextra \
     src/agents/Agent.cpp \
     src/agents/RobberAI.cpp \
     src/agents/PoliceAI.cpp \
+    src/planning/*.cpp \
     src/ai/AStar3D.cpp \
     src/ai/HeuristicEngine.cpp \
     src/ai/PredictionEngine.cpp \
@@ -62,7 +63,23 @@ clang++ -std=c++17 -Wall -Wextra \
     $(pkg-config --cflags --libs raylib) \
     -o heist_gui
 
+echo "🔨 Compiling debug window..."
+clang++ -std=c++17 -Wall -Wextra \
+    "-DHEIST_BUILD_TAG=\"$build_tag\"" \
+    "-DHEIST_BUILD_FLAVOR=\"DEBUG\"" \
+    src/debug/debug_main.cpp \
+    src/debug/DebugWindow.cpp \
+    src/grid/Grid3D.cpp \
+    src/ai/AStar3D.cpp \
+    src/ai/HeuristicEngine.cpp \
+    src/ai/PredictionEngine.cpp \
+    src/planning/*.cpp \
+    $(pkg-config --cflags --libs raylib) \
+    -o debug_window
+
+ln -sf heist_gui heist_game_ai
+
 echo "✅ Build successful!"
 echo ""
 echo "🚀 To run the game:"
-echo "   ./heist_gui"
+echo "   ./heist_game_ai"
