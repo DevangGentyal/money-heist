@@ -27,6 +27,7 @@ struct DebugSuccessorLine {
 struct DebugSnapshot {
     string agent;
     string state;
+    int stepsTaken;
     string currentCell;
     string targetCell;
     string activeGoalType;
@@ -38,7 +39,7 @@ struct DebugSnapshot {
     bool hasChosenNode;
     string reasoning;
 
-    DebugSnapshot() : hasChosenNode(false) {}
+    DebugSnapshot() : stepsTaken(0), hasChosenNode(false) {}
 };
 
 class DebugWindow {

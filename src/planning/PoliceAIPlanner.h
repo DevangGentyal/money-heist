@@ -75,6 +75,7 @@ private:
     void handleInterrupts (WorldState& world);
     bool executeTop       (WorldState& world);
     Position executeMove  (const Position& target, WorldState& world, GoalType gt);
+    void pushClearVaultGoal(WorldState& world);
 
     // Helpers
     Position findNearestTransitionCell(const WorldState& world, int onFloor) const;

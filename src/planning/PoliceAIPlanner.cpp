@@ -298,9 +298,8 @@ Position PoliceAIPlanner::executeMove(const Position& target,
                                        GoalType gt) {
     if (!world.grid) return world.policePos;
 
-    WorldState pw   = world;
-    pw.activeGoalType  = gt;
-    pw.activeTargetPos = target;
+    world.activeGoalType  = gt;
+    world.activeTargetPos = target;
 
     vector<Position> threat{world.robberPos};
     vector<Position> path;
@@ -308,12 +307,12 @@ Position PoliceAIPlanner::executeMove(const Position& target,
     if (heuristic && rules) {
         path = AStar3D::findPathWithHeuristic(
             world.policePos, target, *world.grid,
-            *heuristic, pw, *rules, gt, threat, false,
-            world.vaultStolen || world.alertTriggered || world.boostActive);
+            *heuristic, world, *rules, gt, threat, false,
+            world.vaultStolen || world.alertTriggered || world.boostActive, world.stepsTaken);
     } else {
         path = AStar3D::findPath(
             world.policePos, target, *world.grid, gt,
-            world.vaultStolen || world.alertTriggered || world.boostActive);
+            world.vaultStolen || world.alertTriggered || world.boostActive, world.stepsTaken);
     }
 
     try {
@@ -641,12 +640,36 @@ bool PoliceAIPlanner::executeTop(WorldState& world) {
     return false;
 }
 
+void PoliceAIPlanner::pushClearVaultGoal(WorldState& world) {
+    if (world.policePos != world.vaultPos) return;
+
+    auto isClearGoalPresent = [&]() {
+        for (const auto& entry : goalStack.getStack()) {
+            if (entry.goalExpression == "clear(Vault)" &&
+                entry.status != GoalEntry::COMPLETED &&
+                entry.status != GoalEntry::CANCELLED) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    if (isClearGoalPresent()) return;
+
+    goalStack.removeGoalFromCompleted("clear(Vault)");
+    GoalEntry clearGoal;
+    clearGoal.goalExpression = "clear(Vault)";
+    clearGoal.isOperator = false;
+    goalStack.push(clearGoal);
+}
+
 // ── main turn ─────────────────────────────────────────────────────────────────
 Position PoliceAIPlanner::runTurn(WorldState& world) {
     ensureInitialStack(world);
     // Ensure any previously completed entries are removed first
     goalStack.finalizeCompleted();
     handleInterrupts(world);
+    pushClearVaultGoal(world);
 
     // Keep executing the top entry and finalizing completed entries
     // until no more entries get popped. This ensures that when

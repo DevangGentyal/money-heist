@@ -1,14 +1,16 @@
 #include "RobberAI.h"
 
-RobberAI::RobberAI(const Position& startPos, HeuristicEngine* h)
+RobberAI::RobberAI(const Position& startPos, int id, HeuristicEngine* h)
     : Agent(startPos, AgentRole::ROBBER),
+      targetGoal(startPos),
       state(RobberState::HUNTING_VAULT),
       hasVault(false),
       heuristic(h),
-            rules(nullptr),
+      rules(nullptr),
       turnsWaiting(0),
-      lastPos(startPos) {
-    planner = make_unique<RobberAIPlanner>();
+      lastPos(startPos),
+      robberId(id) {
+    planner = make_unique<RobberAIPlanner>(robberId);
     planner->setHeuristicEngine(h);
     planner->setRuleEngine(rules);
 }
@@ -24,14 +26,17 @@ Position RobberAI::getNextMove(const Grid3D& grid,
     world.robberPos = pos;
     world.vaultPos = grid.getVaultPos();
     world.exitPos = grid.getExitPos();
-    world.alertPos = grid.getAlertZones().empty() ? Position() : grid.getAlertZones().front();
+    world.alertPos = rules && rules->isAlertActive() ? rules->getAlertPos() : Position();
     world.robberHasVault = hasVault;
     world.vaultStolen = hasVault;
-    world.alertTriggered = false;
+    world.alertTriggered = rules ? rules->isAlertActive() : false;
     world.policePositions = policePositions;
+    world.stepsTaken = getStepsTaken();
 
     Position nextMove = planner->runTurn(world);
-    pos = nextMove;
+    if (nextMove != pos) {
+        commitMove(nextMove);
+    }
     hasVault = world.robberHasVault || world.vaultStolen;
     planningDashboard = planner->getPlanningDashboard();
     return nextMove;
@@ -41,7 +46,7 @@ void RobberAI::updateState(const Grid3D& grid, const vector<Position>& policePos
     float minDist = 1000.0f;
     for (const auto& pPos : policePositions) {
         int dist = grid.manhattanDistance(pos, pPos);
-        minDist = min(minDist, (float)dist);
+        minDist = min(minDist, static_cast<float>(dist));
     }
 
     if (minDist < 2) {
@@ -56,7 +61,9 @@ void RobberAI::updateState(const Grid3D& grid, const vector<Position>& policePos
     }
 }
 
-Position RobberAI::computeSafePath(const Grid3D&, const vector<Position>&) { return pos; }
+Position RobberAI::computeSafePath(const Grid3D&, const vector<Position>&) {
+    return pos;
+}
 
 float RobberAI::evaluateDanger(const Position& p, const vector<Position>& policePositions) const {
     float totalDanger = 0.0f;

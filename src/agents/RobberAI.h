@@ -41,15 +41,14 @@ private:
     unique_ptr<RobberAIPlanner> planner;
     PlannerLog planLog;
     string planningDashboard;
-    
+    int robberId;
+
 public:
-    RobberAI(const Position& startPos, HeuristicEngine* h = nullptr);
-    
-    Position getNextMove(const Grid3D& grid, 
-                        const vector<Position>& policePositions) override;
+    RobberAI(const Position& startPos, int id, HeuristicEngine* h = nullptr);
     
     // Strategic functions (preserved for compatibility)
     void updateState(const Grid3D& grid, const vector<Position>& policePositions);
+    Position getNextMove(const Grid3D& grid, const vector<Position>& policePositions) override;
     Position computeSafePath(const Grid3D& grid, 
                            const vector<Position>& policePositions);
     float evaluateDanger(const Position& p, const vector<Position>& policePositions) const;
@@ -58,6 +57,7 @@ public:
     RobberAIPlanner* getPlanner() { return planner.get(); }
     const PlannerLog& getPlanLog() const { return planLog; }
     const string& getPlanningDashboard() const { return planningDashboard; }
+    void setHasVault(bool value) { hasVault = value; }
     
     // Getters/Setters
     RobberState getState() const { return state; }

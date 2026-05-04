@@ -143,7 +143,9 @@ void GameEngineGUI::initialize(int diff, PlayerRole role) {
   // Initialize grid
   int mapDifficulty = difficulty;
   if (playerRole == PlayerRole::POLICE) {
-    mapDifficulty = 4 - difficulty; // 1->3, 2->2, 3->1
+    // When human plays Police (Robber AI active), keep Easy as a single-floor map.
+    if (difficulty == 1) mapDifficulty = 1;
+    else mapDifficulty = 4 - difficulty; // 2->2, 3->1
   }
   grid.loadLevel(mapDifficulty);
 
@@ -154,9 +156,10 @@ void GameEngineGUI::initialize(int diff, PlayerRole role) {
 
   rules = make_unique<RuleEngine>(difficulty);
 
-  // Initialize robber
-  robber = make_unique<RobberAI>(grid.getInitialRobberPos(), heuristic.get());
-  robber->setRuleEngine(rules.get());
+  // Initialize robber(s)
+  robbers.clear();
+  robbers.push_back(make_unique<RobberAI>(grid.getInitialRobberPos(), 0, heuristic.get()));
+  robbers[0]->setRuleEngine(rules.get());
 
   // Initialize police strictly from hardcoded 'P' positions in Grid3D maps.
   vector<Position> hardcodedPoliceSpawns = grid.getInitialPolicePos();
@@ -201,13 +204,29 @@ void GameEngineGUI::initialize(int diff, PlayerRole role) {
   // Initialize renderer
   renderer = make_unique<RaylibRenderer>(grid);
   renderer->initWindow();
-  // Replace spawnDebugWindow() call at end of initialize() with:
+
+  // Debug snapshot windows - spawn for AI-controlled agents
   debugSnapshotPaths.clear();
-  for (size_t i = 0; i < policeList.size(); ++i) {
-    string path = "debug_snapshot_P" + to_string(i + 1) + ".txt";
-    debugSnapshotPaths.push_back(path);
-    spawnDebugWindowForPolice(i, path);
+  debugWindowPids.clear();
+  robberDebugSnapshotPaths.clear();
+  robberDebugWindowPids.clear();
+  
+  if (playerRole == PlayerRole::ROBBER) {
+    // User playing as Robber: show Police AI debug windows
+    for (size_t i = 0; i < policeList.size(); ++i) {
+      string path = "debug_snapshot_P" + to_string(i + 1) + ".txt";
+      debugSnapshotPaths.push_back(path);
+      spawnDebugWindowForPolice(i, path);
+    }
+  } else {
+    // User playing as Police: show Robber AI debug windows
+    for (size_t i = 0; i < robbers.size(); ++i) {
+      string path = "debug_snapshot_R" + to_string(i + 1) + ".txt";
+      robberDebugSnapshotPaths.push_back(path);
+      spawnDebugWindowForRobber(i, path);
+    }
   }
+
   hoveredCell = getPlayerPosition();
   hasHoveredCell = true;
 }
@@ -300,10 +319,18 @@ void GameEngineGUI::render() {
     // Render the game using Raylib
     bool showPopup = vaultPopupFrames > 0;
     bool showGameOver = (gameStatus != GameStatus::RUNNING);
-    string gameOverTitle = (gameStatus == GameStatus::POLICE_WON) ? "Police Win!" : "Robber Win!";
+
+    string gameOverTitle;
+    if (gameStatus == GameStatus::POLICE_WON) {
+        gameOverTitle = "Police Win!";
+    } else if (gameStatus == GameStatus::ROBBER_WON) {
+        gameOverTitle = "Robber Win!";
+    } else {
+        gameOverTitle = "No Wins!";
+    }
     string gameOverPrompt = "Press R to restart";
-    
-    renderer->render(robber->getPosition(),
+
+    renderer->render(robbers.empty() ? Position(0,0,0) : robbers[0]->getPosition(),
                     policePos,
                     turnCount,
                     statusMessage,
@@ -314,17 +341,33 @@ void GameEngineGUI::render() {
                     gameOverTitle,
                     gameOverPrompt);
     
-    // Write per-police debug snapshots
-    for (size_t i = 0; i < policeList.size(); ++i) {
-        if (i >= debugSnapshotPaths.size()) break;
-        const string tmpPath = debugSnapshotPaths[i] + ".tmp";
-        {
-            ofstream f(tmpPath, ios::trunc);
-            f << buildDebugSnapshotForPolice(i);
+    // Write debug snapshots based on player role
+    if (playerRole == PlayerRole::ROBBER) {
+        // User is Robber: write Police AI snapshots
+        for (size_t i = 0; i < policeList.size(); ++i) {
+            if (i >= debugSnapshotPaths.size()) break;
+            const string tmpPath = debugSnapshotPaths[i] + ".tmp";
+            {
+                ofstream f(tmpPath, ios::trunc);
+                f << buildDebugSnapshotForPolice(i);
+            }
+            error_code ec;
+            filesystem::remove(debugSnapshotPaths[i], ec);
+            filesystem::rename(tmpPath, debugSnapshotPaths[i], ec);
         }
-        error_code ec;
-        filesystem::remove(debugSnapshotPaths[i], ec);
-        filesystem::rename(tmpPath, debugSnapshotPaths[i], ec);
+    } else {
+        // User is Police: write Robber AI snapshots
+        for (size_t i = 0; i < robbers.size(); ++i) {
+            if (i >= robberDebugSnapshotPaths.size()) break;
+            const string tmpPath = robberDebugSnapshotPaths[i] + ".tmp";
+            {
+                ofstream f(tmpPath, ios::trunc);
+                f << buildDebugSnapshotForRobber(i);
+            }
+            error_code ec;
+            filesystem::remove(robberDebugSnapshotPaths[i], ec);
+            filesystem::rename(tmpPath, robberDebugSnapshotPaths[i], ec);
+        }
     }
 }
 
@@ -372,13 +415,13 @@ bool GameEngineGUI::tryMovePlayer(const Position &targetPos) {
     }
   }
 
-  if (robber->hasReachedExit(grid) && vaultCollected) {
+  if (!robbers.empty() && robbers[0]->hasReachedExit(grid) && vaultCollected) {
     gameStatus = GameStatus::ROBBER_WON;
     statusMessage = "Robber Escaped with Vault";
     return true;
   }
 
-  if (robber->hasReachedExit(grid) && !vaultCollected) {
+  if (!robbers.empty() && robbers[0]->hasReachedExit(grid) && !vaultCollected) {
     gameStatus = GameStatus::ROBBER_ESCAPED_NO_VAULT;
     statusMessage = "Robber Escaped without Vault";
     return true;
@@ -397,19 +440,19 @@ bool GameEngineGUI::processRobberFirstTurnInPoliceMode() {
     policePositions.push_back(p->getPosition());
   }
 
-  Position robberMove = robber->getNextMove(grid, policePositions);
-  if (robber->canMoveTo(robberMove, grid)) {
-    robber->setPosition(robberMove);
-    applyRobberFloorTransition(*robber, grid);
+  Position robberMove = robbers[0]->getNextMove(grid, policePositions);
+  if (robbers[0]->canMoveTo(robberMove, grid)) {
+    robbers[0]->setPosition(robberMove);
+    robbers[0] ? applyRobberFloorTransition(*robbers[0], grid) : (void)0;
     refreshVaultCollectionState();
 
     // If AI robber steps on alert, police boost should unlock immediately.
-    if (grid.isAlertZone(robber->getPosition())) {
+    if (grid.isAlertZone(robbers[0]->getPosition())) {
       policeBoostTurnsRemaining = 5;
       policeDoubleStepActive = true;
-      grid.setCell(robber->getPosition(), CellType::CCTV_ZONE);
+      grid.setCell(robbers[0]->getPosition(), CellType::CCTV_ZONE);
       if (rules) {
-        rules->notifyAlertTriggered(robber->getPosition());
+        rules->notifyAlertTriggered(robbers[0]->getPosition());
       }
       popupMessage = "Alert Triggered!";
       vaultPopupFrames = 120;
@@ -419,20 +462,20 @@ bool GameEngineGUI::processRobberFirstTurnInPoliceMode() {
 
   syncControlledPoliceToRobberFloor();
 
-  if (robber->hasReachedExit(grid) && vaultCollected) {
+  if (robbers[0]->hasReachedExit(grid) && vaultCollected) {
     gameStatus = GameStatus::ROBBER_WON;
     statusMessage = "Robber Escaped with Vault";
     return false;
   }
 
-  if (robber->hasReachedExit(grid) && !vaultCollected) {
+  if (robbers[0]->hasReachedExit(grid) && !vaultCollected) {
     gameStatus = GameStatus::ROBBER_ESCAPED_NO_VAULT;
     statusMessage = "Robber Escaped without Vault";
     return false;
   }
 
   for (const auto &police : policeList) {
-    if (police->getPosition() == robber->getPosition()) {
+    if (police->getPosition() == robbers[0]->getPosition()) {
       gameStatus = GameStatus::POLICE_WON;
       statusMessage = "Police Caught Robber";
       return false;
@@ -447,7 +490,7 @@ void GameEngineGUI::syncControlledPoliceToRobberFloor() {
     return;
   }
 
-  int robberFloor = robber->getPosition().z;
+  int robberFloor = robbers.empty() ? 0 : robbers[0]->getPosition().z;
 
   if (controlledPoliceIndex >= 0 &&
       controlledPoliceIndex < static_cast<int>(policeList.size()) &&
@@ -457,7 +500,7 @@ void GameEngineGUI::syncControlledPoliceToRobberFloor() {
 
   int bestIndex = -1;
   int bestDistance = std::numeric_limits<int>::max();
-  Position robberPos = robber->getPosition();
+  Position robberPos = robbers.empty() ? Position(0,0,0) : robbers[0]->getPosition();
 
   for (size_t i = 0; i < policeList.size(); ++i) {
     Position p = policeList[i]->getPosition();
@@ -490,7 +533,7 @@ bool GameEngineGUI::isControllableMoveValid(const Position &targetPos) const {
   }
 
   if (playerRole == PlayerRole::ROBBER) {
-    return robber->canMoveTo(targetPos, grid);
+    return !robbers.empty() && robbers[0]->canMoveTo(targetPos, grid);
   }
 
   if (policeList.empty() || controlledPoliceIndex < 0 ||
@@ -525,7 +568,7 @@ Position GameEngineGUI::getMouseGridPosition() const {
 
 Position GameEngineGUI::getPlayerPosition() const {
   if (playerRole == PlayerRole::ROBBER) {
-    return robber->getPosition();
+    return robbers.empty() ? Position(0,0,0) : robbers[0]->getPosition();
   }
 
   if (policeList.empty() || controlledPoliceIndex < 0 ||
@@ -538,20 +581,20 @@ Position GameEngineGUI::getPlayerPosition() const {
 
 void GameEngineGUI::setPlayerPosition(const Position &newPos) {
   if (playerRole == PlayerRole::ROBBER) {
-    robber->setPosition(newPos);
+    robbers[0]->setPosition(newPos);
 
-    Position updatedPos = robber->getPosition();
+    Position updatedPos = robbers[0]->getPosition();
     CellType atCell = grid.getCell(updatedPos);
     if (atCell == CellType::STAIRS) {
       Position up(updatedPos.x, updatedPos.y, updatedPos.z + 1);
       if (grid.isValid(up) && !grid.isWall(up)) {
-        if (!isPoliceOnCell(up)) robber->setPosition(up);
+        if (!robbers.empty() && !isPoliceOnCell(up)) robbers[0]->setPosition(up);
         else statusMessage = "Blocked: police at upstairs landing";
       }
     } else if (atCell == CellType::ELEVATOR) {
       Position down(updatedPos.x, updatedPos.y, updatedPos.z - 1);
       if (grid.isValid(down) && !grid.isWall(down)) {
-        if (!isPoliceOnCell(down)) robber->setPosition(down);
+        if (!robbers.empty() && !isPoliceOnCell(down)) robbers[0]->setPosition(down);
         else statusMessage = "Blocked: police at downstairs landing";
       }
     }
@@ -635,7 +678,7 @@ void GameEngineGUI::updateAI() {
     policePositions.push_back(p->getPosition());
   }
 
-  const Position currentRobberPos = robber->getPosition();
+  const Position currentRobberPos = robbers[0]->getPosition();
   const bool robberMoved = !(currentRobberPos == lastRobberPos);
 
   if (playerRole == PlayerRole::ROBBER) {
@@ -694,7 +737,7 @@ void GameEngineGUI::updateAI() {
       publishDebugSnapshot();
 
       statusMessage = string("Police planning: execute move for P") + to_string(i + 1);
-      Position policeMove = police->getNextMove(grid, vector<Position>{robber->getPosition()});
+      Position policeMove = police->getNextMove(grid, vector<Position>{robbers[0]->getPosition()});
       publishDebugSnapshot();
 
       if (policeMove == police->getPosition()) {
@@ -740,7 +783,7 @@ void GameEngineGUI::updateAI() {
       if (static_cast<int>(i) == controlledPoliceIndex) {
         continue;
       }
-      vector<Position> robberAsTarget{robber->getPosition()};
+      vector<Position> robberAsTarget{robbers[0]->getPosition()};
 
       // Tell police about vault status so they know if they can use stairs
       policeList[i]->setVaultCollected(vaultCollected);
@@ -752,7 +795,7 @@ void GameEngineGUI::updateAI() {
       statusMessage = string("Police planning: execute move for P") + to_string(i + 1);
 
       if (occupiedPolicePositions.count(policeMove) &&
-          policeMove != robber->getPosition()) {
+          policeMove != robbers[0]->getPosition()) {
         continue;
       }
 
@@ -817,13 +860,13 @@ void GameEngineGUI::updateAI() {
 }
 
 void GameEngineGUI::checkWinConditions() {
-  if (robber->hasReachedExit(grid) && vaultCollected) {
+  if (robbers[0]->hasReachedExit(grid) && vaultCollected) {
     gameStatus = GameStatus::ROBBER_WON;
     statusMessage = "Robber Escaped with Vault";
     return;
   }
 
-  if (robber->hasReachedExit(grid) && !vaultCollected) {
+  if (robbers[0]->hasReachedExit(grid) && !vaultCollected) {
     gameStatus = GameStatus::ROBBER_ESCAPED_NO_VAULT;
     statusMessage = "Robber Escaped without Vault";
     return;
@@ -831,7 +874,7 @@ void GameEngineGUI::checkWinConditions() {
 
   // Police wins if catches robber
   for (const auto &police : policeList) {
-    if (police->getPosition() == robber->getPosition()) {
+    if (police->getPosition() == robbers[0]->getPosition()) {
       gameStatus = GameStatus::POLICE_WON;
       statusMessage = "Police Caught Robber";
       return;
@@ -840,8 +883,10 @@ void GameEngineGUI::checkWinConditions() {
 }
 
 void GameEngineGUI::refreshVaultCollectionState() {
-  if (!vaultCollected && robber->getPosition() == grid.getVaultPos()) {
+  if (!vaultCollected && robbers[0]->getPosition() == grid.getVaultPos()) {
     vaultCollected = true;
+    // Clear vault tile so GUI reflects collection immediately
+    grid.setCell(grid.getVaultPos(), CellType::EMPTY);
     if (rules) {
       rules->notifyVaultStolen();
     }
@@ -855,7 +900,7 @@ void GameEngineGUI::refreshVaultCollectionState() {
         WorldState ws;
         ws.grid = &grid;
         ws.policePos = police->getPosition();
-        ws.robberPos = robber->getPosition();
+        ws.robberPos = robbers[0]->getPosition();
         ws.vaultPos = grid.getVaultPos();
         ws.exitPos = grid.getExitPos();
         ws.alertPos = rules ? rules->getAlertPos() : Position();
@@ -969,7 +1014,7 @@ string GameEngineGUI::buildDebugSnapshot() const {
   auto getTargetName = [&](const Position& pos) -> string {
     if (pos == grid.getVaultPos()) return "Vault";
     if (pos == grid.getExitPos()) return "Exit";
-    if (pos == robber->getPosition()) return "Robber";
+    if (pos == robbers[0]->getPosition()) return "Robber";
     stringstream ss;
     ss << "[" << pos.x << ", " << pos.y << ", " << pos.z << "]";
     return ss.str();
@@ -1003,8 +1048,8 @@ string GameEngineGUI::buildDebugSnapshot() const {
       }
     }
   } else {
-    if (robber->getPlanner() && robber->getPlanner()->hasAstarTrace()) {
-      trace = robber->getPlanner()->getLastAstarTrace();
+    if (robbers[0]->getPlanner() && robbers[0]->getPlanner()->hasAstarTrace()) {
+      trace = robbers[0]->getPlanner()->getLastAstarTrace();
       successors = trace.immediateSuccessors;
     }
   }
@@ -1037,7 +1082,7 @@ string GameEngineGUI::buildDebugSnapshot() const {
           if (entry.goalExpression.find("chase(Police, Robber)") != string::npos ||
               entry.goalExpression.find("at(Police, Robber)") != string::npos ||
               entry.goalExpression.find("sameFloor") != string::npos) {
-            targetPos = robber->getPosition();
+            targetPos = robbers[0]->getPosition();
             break;
           } else if (entry.goalExpression.find("protect(Police, Vault)") != string::npos ||
                      entry.goalExpression.find("at(Police, Vault)") != string::npos) {
@@ -1053,13 +1098,13 @@ string GameEngineGUI::buildDebugSnapshot() const {
     }
   } else {
     agent = "Robber";
-    currentPos = robber->getPosition();
+    currentPos = robbers[0]->getPosition();
     targetPos = vaultCollected ? grid.getExitPos() : grid.getVaultPos();
-    currentState = robberStateName(robber->getState());
-    if (robber->getPlanner()) {
-      activeGoals = robber->getPlanner()->getGoalStack().getStack();
-      completedGoals = robber->getPlanner()->getGoalStack().getCompletedGoals();
-      cancelledGoals = robber->getPlanner()->getGoalStack().getCancelledGoals();
+    currentState = robberStateName(robbers[0]->getState());
+    if (robbers[0]->getPlanner()) {
+      activeGoals = robbers[0]->getPlanner()->getGoalStack().getStack();
+      completedGoals = robbers[0]->getPlanner()->getGoalStack().getCompletedGoals();
+      cancelledGoals = robbers[0]->getPlanner()->getGoalStack().getCancelledGoals();
     }
   }
 
@@ -1080,6 +1125,16 @@ string GameEngineGUI::buildDebugSnapshot() const {
   ss << "{\n";
   ss << "  \"agent\": " << jsonString(agent) << ",\n";
   ss << "  \"state\": " << jsonString(currentState) << ",\n";
+  int stepsTaken = 0;
+  if (playerRole == PlayerRole::ROBBER) {
+    if (!policeList.empty()) {
+      int policeIndex = std::min(controlledPoliceIndex, static_cast<int>(policeList.size() - 1));
+      stepsTaken = policeList[policeIndex]->getStepsTaken();
+    }
+  } else if (!robbers.empty()) {
+    stepsTaken = robbers[0]->getStepsTaken();
+  }
+  ss << "  \"stepsTaken\": " << stepsTaken << ",\n";
   ss << "  \"currentCell\": " << jsonPos(currentPos) << ",\n";
   
   // Output targetCell: "None" if empty goal stack, otherwise format as "[x,y,z]" or label
@@ -1160,7 +1215,24 @@ void GameEngineGUI::stopDebugWindow() {
     for (pid_t pid : debugWindowPids) {
         if (pid > 0) kill(pid, SIGTERM);
     }
+    for (pid_t pid : robberDebugWindowPids) {
+        if (pid > 0) kill(pid, SIGTERM);
+    }
     debugWindowPids.clear();
+    robberDebugWindowPids.clear();
+#endif
+}
+
+void GameEngineGUI::spawnDebugWindowForRobber(int index, const string& path) {
+#ifdef __APPLE__
+    pid_t pid = fork();
+    if (pid == 0) {
+        string title = "Robber " + to_string(index + 1) + " Debug";
+        execl("./debug_window", "./debug_window",
+              path.c_str(), title.c_str(), (char*)nullptr);
+        _exit(1);
+    }
+    if (pid > 0) robberDebugWindowPids.push_back(pid);
 #endif
 }
 
@@ -1223,22 +1295,21 @@ string GameEngineGUI::buildDebugSnapshotForPolice(int idx) const {
                "    }";
     };
 
+    const auto& police       = policeList[idx];
+    Position    currentPos   = police->getPosition();
+    string      agentLabel   = "Police" + to_string(idx + 1);
+    string      currentState = "PATROL";
+    string      activeGoalTypeStr = "NONE";
     auto jsonNode = [&](const Node& n, bool chosen) -> string {
         return "{\n"
                "      \"label\": " + jsonString(positionToString(n.pos)) + ",\n"
                "      \"pos\": "   + jsonPos(n.pos)   + ",\n"
                "      \"g\": "     + to_string(n.g)   + ",\n"
                "      \"h\": "     + to_string(n.h)   + ",\n"
-               "      \"f\": "     + to_string(n.f)   + ",\n"
+               "      \"f\": "     + to_string(n.g + n.h)   + ",\n"
                "      \"chosen\": "+ string(chosen ? "true" : "false") + "\n"
                "    }";
     };
-
-    const auto& police       = policeList[idx];
-    Position    currentPos   = police->getPosition();
-    string      agentLabel   = "Police" + to_string(idx + 1);
-    string      currentState = "PATROL";
-    string      activeGoalTypeStr = "NONE";
 
     vector<GoalEntry> activeGoals, completedGoals, cancelledGoals;
     vector<Node>      successors;
@@ -1260,7 +1331,7 @@ string GameEngineGUI::buildDebugSnapshotForPolice(int idx) const {
     Position targetPos = grid.getVaultPos();
     for (const auto& e : activeGoals) {
         if (e.goalExpression.find("Robber") != string::npos) {
-            targetPos = robber->getPosition(); break;
+            targetPos = robbers[0]->getPosition(); break;
         }
         if (e.goalExpression.find("Alert") != string::npos) {
             targetPos = rules ? rules->getAlertPos() : Position(); break;
@@ -1330,15 +1401,204 @@ string GameEngineGUI::buildDebugSnapshotForPolice(int idx) const {
     for (const auto& n : filtered) {
         if (n.pos == trace.chosenNode) { cn = &n; break; }
     }
+    if (!cn) {
+        for (const auto& n : successors) {
+            if (n.pos == trace.chosenNode) { cn = &n; break; }
+        }
+    }
     ss << "  \"chosenNode\": {\n";
     ss << "    \"label\": " << jsonString(positionToString(trace.chosenNode)) << ",\n";
     ss << "    \"pos\": "   << jsonPos(trace.chosenNode) << ",\n";
     ss << "    \"g\": "     << (cn ? cn->g : 0) << ",\n";
     ss << "    \"h\": "     << (cn ? cn->h : 0) << ",\n";
-    ss << "    \"f\": "     << (cn ? cn->f : 0) << "\n";
+    ss << "    \"f\": "     << (cn ? cn->g + cn->h : 0) << "\n";
     ss << "  },\n";
     ss << "  \"activeGoalType\": " << jsonString(activeGoalTypeStr) << "\n";
     ss << "}\n";
 
     return ss.str();
 }
+
+string GameEngineGUI::buildDebugSnapshotForRobber(int idx) const {
+    // Similar to buildDebugSnapshotForPolice but for robber(idx)
+    if (idx >= static_cast<int>(robbers.size())) {
+        return "{}";  // Return empty JSON if robber doesn't exist
+    }
+
+    auto goalTypeToString = [](GoalType type) -> string {
+        switch (type) {
+            case GoalType::REACH_VAULT:     return "REACH_VAULT";
+            case GoalType::ESCAPE_TO_EXIT:  return "ESCAPE_TO_EXIT";
+            default:                        return "NONE";
+        }
+    };
+
+    auto statusToString = [](GoalEntry::Status s) -> string {
+        switch (s) {
+            case GoalEntry::ACTIVE:     return "ACTIVE";
+            case GoalEntry::PERFORMING: return "PERFORMING";
+            case GoalEntry::COMPLETED:  return "COMPLETED";
+            case GoalEntry::CANCELLED:  return "CANCELLED";
+            default:                    return "PENDING";
+        }
+    };
+
+    auto jsonString = [](const string& v) -> string {
+        string out = "\"";
+        for (char c : v) {
+            if (c == '"' || c == '\\') out += '\\';
+            out += c;
+        }
+        out += '"';
+        return out;
+    };
+
+    auto jsonArray = [&](const vector<string>& vals) -> string {
+        string out = "[";
+        for (size_t i = 0; i < vals.size(); ++i) {
+            if (i) out += ", ";
+            out += jsonString(vals[i]);
+        }
+        out += "]";
+        return out;
+    };
+
+    auto jsonPos = [](const Position& p) -> string {
+        return "[" + to_string(p.x) + ", " + to_string(p.y) + ", " + to_string(p.z) + "]";
+    };
+
+    auto jsonGoalEntry = [&](const GoalEntry& e) -> string {
+        return "{\n"
+               "      \"expression\": "   + jsonString(e.goalExpression)        + ",\n"
+               "      \"isOperator\": "   + (e.isOperator ? "true" : "false")   + ",\n"
+               "      \"operatorName\": " + jsonString(e.operatorName)           + ",\n"
+               "      \"status\": "       + jsonString(statusToString(e.status)) + ",\n"
+               "      \"preconditions\": "+ jsonArray(e.preconditions)           + ",\n"
+               "      \"effects\": "      + jsonArray(e.effects)                 + "\n"
+               "    }";
+    };
+
+    const auto& robber        = robbers[idx];
+    Position    currentPos    = robbers[0]->getPosition();
+    string      agentLabel    = "Robber" + to_string(idx + 1);
+    string      currentState  = robberStateName(robbers[0]->getState());
+    string      activeGoalTypeStr = "NONE";
+    auto jsonNode = [&](const Node& n, bool chosen) -> string {
+        return "{\n"
+               "      \"label\": " + jsonString(positionToString(n.pos)) + ",\n"
+               "      \"pos\": "   + jsonPos(n.pos)   + ",\n"
+               "      \"g\": "     + to_string(n.g)   + ",\n"
+               "      \"h\": "     + to_string(n.h)   + ",\n"
+               "      \"f\": "     + to_string(n.g + n.h)   + ",\n"
+               "      \"chosen\": "+ string(chosen ? "true" : "false") + "\n"
+               "    }";
+    };
+
+    Position    targetPos     = vaultCollected ? grid.getExitPos() : grid.getVaultPos();
+    vector<GoalEntry> activeGoals, completedGoals, cancelledGoals;
+    vector<Node> successors;
+    SearchTrace trace;
+
+    // Get A* trace from robber's planner if available
+    if (robbers[0]->getPlanner() && robbers[0]->getPlanner()->hasAstarTrace()) {
+        trace = robbers[0]->getPlanner()->getLastAstarTrace();
+        successors = trace.immediateSuccessors;
+        activeGoalTypeStr = goalTypeToString(trace.goalType);
+    }
+
+    // Fallback to global trace
+    if (successors.empty()) {
+        successors = AStar3D::getSuccessorLog();
+        trace = AStar3D::getLastSearchTrace();
+    }
+
+    // Get goal stack from planner
+    if (robbers[0]->getPlanner()) {
+        activeGoals = robbers[0]->getPlanner()->getGoalStack().getStack();
+        completedGoals = robbers[0]->getPlanner()->getGoalStack().getCompletedGoals();
+        cancelledGoals = robbers[0]->getPlanner()->getGoalStack().getCancelledGoals();
+    }
+
+    // Filter successors to adjacent cells only
+    auto areAdjacentCells = [](const Position& a, const Position& b) {
+        if (a.z != b.z) return false;
+        int dx = abs(a.x - b.x);
+        int dy = abs(a.y - b.y);
+        return (dx == 1 && dy == 0) || (dx == 0 && dy == 1);
+    };
+
+    Position filterCenter = trace.start;
+    vector<Node> filtered;
+    for (const auto& node : successors) {
+        if (areAdjacentCells(filterCenter, node.pos)) {
+            filtered.push_back(node);
+        }
+    }
+
+    stringstream ss;
+    ss << "{\n";
+    ss << "  \"agent\": " << jsonString(agentLabel) << ",\n";
+    ss << "  \"state\": " << jsonString(currentState) << ",\n";
+    ss << "  \"stepsTaken\": " << robber->getStepsTaken() << ",\n";
+    ss << "  \"currentCell\": " << jsonPos(currentPos) << ",\n";
+
+    string targetCellStr = "None";
+    if (!activeGoals.empty()) {
+        targetCellStr = jsonPos(targetPos);
+    }
+    ss << "  \"targetCell\": " << targetCellStr << ",\n";
+
+    const vector<GoalEntry> displayActiveGoals = expandGoalEntriesForDisplay(activeGoals);
+    const vector<GoalEntry> displayCompletedGoals = expandGoalEntriesForDisplay(completedGoals);
+    const vector<GoalEntry> displayCancelledGoals = expandGoalEntriesForDisplay(cancelledGoals);
+
+    ss << "  \"goalStack\": [\n";
+    for (size_t i = 0; i < displayActiveGoals.size(); ++i) {
+        ss << "    " << jsonGoalEntry(displayActiveGoals[i]);
+        if (i + 1 < displayActiveGoals.size()) ss << ",";
+        ss << "\n";
+    }
+    ss << "  ],\n";
+    ss << "  \"completedGoals\": [\n";
+    for (size_t i = 0; i < displayCompletedGoals.size(); ++i) {
+        ss << "    " << jsonGoalEntry(displayCompletedGoals[i]);
+        if (i + 1 < displayCompletedGoals.size()) ss << ",";
+        ss << "\n";
+    }
+    ss << "  ],\n";
+    ss << "  \"cancelledGoals\": [\n";
+    for (size_t i = 0; i < displayCancelledGoals.size(); ++i) {
+        ss << "    " << jsonGoalEntry(displayCancelledGoals[i]);
+        if (i + 1 < displayCancelledGoals.size()) ss << ",";
+        ss << "\n";
+    }
+    ss << "  ],\n";
+    ss << "  \"astarSuccessors\": [\n";
+    for (size_t i = 0; i < filtered.size(); ++i) {
+        bool chosen = (filtered[i].pos == trace.chosenNode);
+        ss << "    " << jsonNode(filtered[i], chosen);
+        if (i+1 < filtered.size()) ss << ",";
+        ss << "\n";
+    }
+    ss << "  ],\n";
+
+    const Node* cn = nullptr;
+    for (const auto& n : filtered) {
+        if (n.pos == trace.chosenNode) { cn = &n; break; }
+    }
+    if (!cn) {
+        for (const auto& n : successors) {
+            if (n.pos == trace.chosenNode) { cn = &n; break; }
+        }
+    }
+    ss << "  \"chosenNode\": {\n";
+    ss << "    \"label\": " << jsonString(positionToString(trace.chosenNode)) << ",\n";
+    ss << "    \"pos\": "   << jsonPos(trace.chosenNode) << ",\n";
+    ss << "    \"g\": "     << (cn ? cn->g : 0) << ",\n";
+    ss << "    \"h\": "     << (cn ? cn->h : 0) << ",\n";
+    ss << "    \"f\": "     << (cn ? cn->g + cn->h : 0) << "\n";
+    ss << "  },\n";
+    ss << "  \"activeGoalType\": " << jsonString(activeGoalTypeStr) << "\n";
+    ss << "}\n";
+
+    return ss.str();}

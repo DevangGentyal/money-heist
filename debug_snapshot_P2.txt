@@ -1,206 +1,22 @@
 {
   "agent": "Police2",
   "state": "PATROL",
-  "currentCell": [5, 7, 0],
-  "targetCell": [7, 8, 0],
+  "currentCell": [7, 8, 1],
+  "targetCell": [10, 10, 2],
   "goalStack": [
-    {
-      "expression": "MOVE(Police2, Robber)",
-      "isOperator": true,
-      "operatorName": "MOVE",
-      "status": "ACTIVE",
-      "preconditions": ["sameFloor(Police2, Robber)", "pathAvailable(Police2, Robber)"],
-      "effects": ["Police2.pos=Robber.pos"]
-    },
-    {
-      "expression": "catch(Police2, Robber)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "PENDING",
-      "preconditions": [],
-      "effects": []
-    }
   ],
   "completedGoals": [
-    {
-      "expression": "sameFloor(Police2, Upstairs)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "COMPLETED",
-      "preconditions": [],
-      "effects": []
-    },
-    {
-      "expression": "pathAvailable(Police2, Upstairs)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "COMPLETED",
-      "preconditions": [],
-      "effects": []
-    },
-    {
-      "expression": "MOVE(Police2, Upstairs)",
-      "isOperator": true,
-      "operatorName": "MOVE",
-      "status": "COMPLETED",
-      "preconditions": ["sameFloor(Police2, Upstairs)", "pathAvailable(Police2, Upstairs)"],
-      "effects": []
-    },
-    {
-      "expression": "protect(Police2, Upstairs)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "COMPLETED",
-      "preconditions": [],
-      "effects": []
-    },
-    {
-      "expression": "sameFloor(Police2, Alert)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "COMPLETED",
-      "preconditions": [],
-      "effects": []
-    },
-    {
-      "expression": "pathAvailable(Police2, Alert)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "COMPLETED",
-      "preconditions": [],
-      "effects": []
-    },
-    {
-      "expression": "MOVE(Police2, Alert)",
-      "isOperator": true,
-      "operatorName": "MOVE",
-      "status": "COMPLETED",
-      "preconditions": ["sameFloor(Police2, Alert)", "pathAvailable(Police2, Alert)"],
-      "effects": ["Police2.pos=Alert.pos"]
-    },
-    {
-      "expression": "respond(Police2, Alert)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "COMPLETED",
-      "preconditions": [],
-      "effects": []
-    },
-    {
-      "expression": "sameFloor(Police2, Upstairs)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "COMPLETED",
-      "preconditions": [],
-      "effects": []
-    },
-    {
-      "expression": "pathAvailable(Police2, Upstairs)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "COMPLETED",
-      "preconditions": [],
-      "effects": []
-    },
-    {
-      "expression": "MOVE(Police2, Upstairs)",
-      "isOperator": true,
-      "operatorName": "MOVE",
-      "status": "COMPLETED",
-      "preconditions": ["sameFloor(Police2, Upstairs)", "pathAvailable(Police2, Upstairs)"],
-      "effects": []
-    },
-    {
-      "expression": "protect(Police2, Upstairs)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "COMPLETED",
-      "preconditions": [],
-      "effects": []
-    },
-    {
-      "expression": "sameFloor(Police2, Upstairs)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "COMPLETED",
-      "preconditions": [],
-      "effects": []
-    },
-    {
-      "expression": "pathAvailable(Police2, Upstairs)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "COMPLETED",
-      "preconditions": [],
-      "effects": []
-    },
-    {
-      "expression": "MOVE(Police2, Upstairs)",
-      "isOperator": true,
-      "operatorName": "MOVE",
-      "status": "COMPLETED",
-      "preconditions": ["sameFloor(Police2, Upstairs)", "pathAvailable(Police2, Upstairs)"],
-      "effects": ["Police2.floor+=1"]
-    },
-    {
-      "expression": "sameFloor(Police2, Robber)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "COMPLETED",
-      "preconditions": [],
-      "effects": []
-    },
-    {
-      "expression": "pathAvailable(Police2, Robber)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "COMPLETED",
-      "preconditions": [],
-      "effects": []
-    }
   ],
   "cancelledGoals": [
-    {
-      "expression": "stayHalt(Police2)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "CANCELLED",
-      "preconditions": [],
-      "effects": []
-    },
-    {
-      "expression": "protect(Police2,Downstairs)",
-      "isOperator": false,
-      "operatorName": "",
-      "status": "CANCELLED",
-      "preconditions": ["sameFloor(Police2, 1)", "pathAvailable(Police2, 1)"],
-      "effects": []
-    }
   ],
   "astarSuccessors": [
-    {
-      "label": "[5,5,0]",
-      "pos": [5, 5, 0],
-      "g": 1,
-      "h": 5,
-      "f": 6,
-      "chosen": false
-    },
-    {
-      "label": "[5,7,0]",
-      "pos": [5, 7, 0],
-      "g": 1,
-      "h": 2,
-      "f": 3,
-      "chosen": true
-    }
   ],
   "chosenNode": {
-    "label": "[5,7,0]",
-    "pos": [5, 7, 0],
-    "g": 1,
-    "h": 2,
-    "f": 3
+    "label": "[0,0,0]",
+    "pos": [0, 0, 0],
+    "g": 0,
+    "h": 0,
+    "f": 0
   },
-  "activeGoalType": "CHASE_ROBBER"
+  "activeGoalType": "NONE"
 }

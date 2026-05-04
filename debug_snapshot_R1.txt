@@ -1,0 +1,143 @@
+{
+  "agent": "Robber1",
+  "state": "HUNTING_VAULT",
+  "stepsTaken": 10,
+  "currentCell": [11, 3, 0],
+  "targetCell": [10, 2, 0],
+  "goalStack": [
+    {
+      "expression": "clear(Vault)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "ACTIVE",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "samefloor(R,Alert)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "PENDING",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "MOVE(R,Alert)",
+      "isOperator": true,
+      "operatorName": "MOVE",
+      "status": "PENDING",
+      "preconditions": ["samefloor(R,Alert)"],
+      "effects": ["R", "Alert"]
+    },
+    {
+      "expression": "on(R,Alert)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "PENDING",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "TRIGGER(Vault)",
+      "isOperator": true,
+      "operatorName": "TRIGGER",
+      "status": "PENDING",
+      "preconditions": ["on(R,Alert)"],
+      "effects": ["Vault"]
+    },
+    {
+      "expression": "clear(Vault)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "PENDING",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "MOVE(R,Vault)",
+      "isOperator": true,
+      "operatorName": "MOVE",
+      "status": "PENDING",
+      "preconditions": ["samefloor(R,Vault)"],
+      "effects": ["R", "Vault"]
+    },
+    {
+      "expression": "on(R,Vault)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "PENDING",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "STEAL(R,Vault)",
+      "isOperator": true,
+      "operatorName": "STEAL",
+      "status": "PENDING",
+      "preconditions": ["clear(Vault)", "on(R,Vault)"],
+      "effects": ["R", "Vault"]
+    },
+    {
+      "expression": "steal(R,Vault)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "PENDING",
+      "preconditions": [],
+      "effects": []
+    },
+    {
+      "expression": "escape(R)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "PENDING",
+      "preconditions": [],
+      "effects": []
+    }
+  ],
+  "completedGoals": [
+    {
+      "expression": "samefloor(R,Vault)",
+      "isOperator": false,
+      "operatorName": "",
+      "status": "COMPLETED",
+      "preconditions": [],
+      "effects": []
+    }
+  ],
+  "cancelledGoals": [
+  ],
+  "astarSuccessors": [
+    {
+      "label": "[12,4,0]",
+      "pos": [12, 4, 0],
+      "g": 10,
+      "h": 4,
+      "f": 14,
+      "chosen": false
+    },
+    {
+      "label": "[11,3,0]",
+      "pos": [11, 3, 0],
+      "g": 10,
+      "h": 2,
+      "f": 12,
+      "chosen": true
+    },
+    {
+      "label": "[11,5,0]",
+      "pos": [11, 5, 0],
+      "g": 10,
+      "h": 4,
+      "f": 14,
+      "chosen": false
+    }
+  ],
+  "chosenNode": {
+    "label": "[11,3,0]",
+    "pos": [11, 3, 0],
+    "g": 10,
+    "h": 2,
+    "f": 12
+  },
+  "activeGoalType": "REACH_VAULT"
+}

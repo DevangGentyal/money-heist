@@ -1,6 +1,13 @@
 #pragma once
+#include <memory>
 #include <string>
 #include <vector>
+
+namespace ai {
+namespace strips {
+struct Operator;
+} }
+
 using namespace std;
 
 struct GoalEntry {
@@ -11,6 +18,7 @@ struct GoalEntry {
     Status status     = PENDING;
     vector<string> preconditions;
     vector<string> effects;
+    shared_ptr<ai::strips::Operator> operatorData;
 };
 
 class GoalStack {
@@ -27,6 +35,7 @@ public:
     void markComplete();
     void markPerforming();
     void finalizeCompleted();       // remove COMPLETED/CANCELLED from top
+    void removeGoalFromCompleted(const string& goalExpression);  // Remove specific goal from completed list
 
     // Returns top-first (index 0 = top)
     vector<GoalEntry> getStack()          const;

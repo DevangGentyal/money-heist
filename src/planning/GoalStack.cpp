@@ -110,3 +110,14 @@ string GoalStack::debugSummary() const {
         ss << " TOP=[" << stackEntries.back().goalExpression << "]";
     return ss.str();
 }
+
+void GoalStack::removeGoalFromCompleted(const string& goalExpression) {
+    auto it = completedGoals.begin();
+    while (it != completedGoals.end()) {
+        if (it->goalExpression == goalExpression) {
+            it = completedGoals.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}

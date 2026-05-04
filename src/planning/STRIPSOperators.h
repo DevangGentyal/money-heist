@@ -43,6 +43,7 @@ struct WorldState {
     GoalType activeGoalType = GoalType::NONE;
     Position activeTargetPos;
     int activeTargetFloor = 0;
+    int stepsTaken = 0;  // Current agent step count for A* initialG
 
     bool hasGrid() const { return grid != nullptr; }
 };

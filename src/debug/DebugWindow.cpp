@@ -262,6 +262,7 @@ bool DebugWindow::loadSnapshotFromFile() {
     string content((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
     loaded.agent = extractStringValue(content, "\"agent\"");
     loaded.state = extractStringValue(content, "\"state\"");
+    loaded.stepsTaken = extractIntValue(content, "\"stepsTaken\"");
     loaded.currentCell = extractBracketValue(content, "\"currentCell\"");
     loaded.targetCell = extractBracketValue(content, "\"targetCell\"");
     loaded.activeGoalType = extractStringValue(content, "\"activeGoalType\"");
@@ -373,6 +374,10 @@ void DebugWindow::renderGoalStackPanel(int x, int y, int width, int height) {
     y += headerFontSize + 8;
     if (!snapshot.agent.empty()) {
         DrawTextEx(font, (string("Agent: ") + snapshot.agent).c_str(), {(float)x, (float)y}, contentFontSize, 0, kBlack);
+        y += contentFontSize + 4;
+    }
+    if (snapshot.stepsTaken > 0 || !snapshot.agent.empty()) {
+        DrawTextEx(font, (string("Steps Taken: ") + to_string(snapshot.stepsTaken)).c_str(), {(float)x, (float)y}, contentFontSize, 0, kBlack);
         y += contentFontSize + 4;
     }
     if (!snapshot.activeGoalType.empty()) {
@@ -527,14 +532,12 @@ void DebugWindow::renderAStarPanel(int x, int y, int width, int height) {
     int columnG = x + 110;
     int columnH = x + 170;
     int columnF = x + 220;
-    int columnStar = x + 280;
 
     DrawRectangleLines(tableLeft, tableTop, tableWidth, headerHeight, kBorder);
     DrawTextEx(font, "Pos", {(float)x, (float)y}, contentFontSize, 0, kBlack);
     DrawTextEx(font, "g", {(float)columnG, (float)y}, contentFontSize, 0, kBlack);
     DrawTextEx(font, "h", {(float)columnH, (float)y}, contentFontSize, 0, kBlack);
     DrawTextEx(font, "f", {(float)columnF, (float)y}, contentFontSize, 0, kBlack);
-    DrawTextEx(font, "*", {(float)columnStar, (float)y}, contentFontSize, 0, kBlack);
     y += contentFontSize + 6;
 
     for (const auto& succ : snapshot.successors) {
@@ -550,7 +553,6 @@ void DebugWindow::renderAStarPanel(int x, int y, int width, int height) {
         DrawTextEx(font, gText.c_str(), {(float)columnG, (float)y}, contentFontSize, 0, textCol);
         DrawTextEx(font, hText.c_str(), {(float)columnH, (float)y}, contentFontSize, 0, textCol);
         DrawTextEx(font, fText.c_str(), {(float)columnF, (float)y}, contentFontSize, 0, textCol);
-        DrawTextEx(font, succ.chosen ? "★" : "", {(float)columnStar, (float)y}, contentFontSize, 0, textCol);
         y += rowHeight;
     }
 

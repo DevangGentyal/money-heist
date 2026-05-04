@@ -54,6 +54,8 @@ clang++ -std=c++17 -Wall -Wextra \
     src/agents/Agent.cpp \
     src/agents/RobberAI.cpp \
     src/agents/PoliceAI.cpp \
+    src/ai/planner/*.cpp \
+    src/ai/strips/*.cpp \
     src/planning/*.cpp \
     src/ai/AStar3D.cpp \
     src/ai/HeuristicEngine.cpp \
@@ -73,6 +75,8 @@ clang++ -std=c++17 -Wall -Wextra \
     src/ai/AStar3D.cpp \
     src/ai/HeuristicEngine.cpp \
     src/ai/PredictionEngine.cpp \
+    src/ai/planner/*.cpp \
+    src/ai/strips/*.cpp \
     src/planning/*.cpp \
     $(pkg-config --cflags --libs raylib) \
     -o debug_window

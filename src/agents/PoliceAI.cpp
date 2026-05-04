@@ -37,9 +37,12 @@ Position PoliceAI::getNextMove(const Grid3D& grid,
     world.alertTriggered = rules ? rules->isAlertActive() : false;
     world.boostActive = rules ? rules->isBoostActive() : false;
     world.policePositions = {pos};
+    world.stepsTaken = getStepsTaken();  // Pass current step count for A* initialG
 
     planner->setHardMode(hardMode);
     Position nextMove = planner->runTurn(world);
+    // Commit the move — this increments stepsTaken
+    commitMove(nextMove);  
     pos = nextMove;
     planningDashboard = planner->getPlanningDashboard();
     return nextMove;

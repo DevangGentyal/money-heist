@@ -43,7 +43,9 @@ public:
                                      const Position& goal,
                                      const Grid3D& grid,
                                      GoalType goalType = GoalType::MOVE_FLOOR_GOAL,
-                                     bool canTransitionFloors = true);
+                                     bool canTransitionFloors = true,
+                                     int initialG = 0
+                                    );
 
     static vector<Position> findPathWithHeuristic(const Position& start,
                                                   const Position& goal,
@@ -54,7 +56,9 @@ public:
                                                   GoalType goalType,
                                                   const vector<Position>& obstacles,
                                                   bool isRobberPerspective,
-                                                  bool canTransitionFloors = true);
+                                                  bool canTransitionFloors = true,
+                                                  int initialG = 0
+                                                );
 
     static int maneuverCost(const Position& from, const Position& to,
                            const Grid3D& grid);

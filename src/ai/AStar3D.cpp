@@ -1,5 +1,4 @@
 #include "AStar3D.h"
-
 #include <algorithm>
 #include <cmath>
 
@@ -14,25 +13,40 @@ Node makeNode(const Position& pos, int g, float h) {
     node.f = g + h;
     return node;
 }
-}
 
-const SearchTrace& AStar3D::getLastSearchTrace() {
-    return lastTrace;
+template <typename HeuristicFn>
+void logSuccessors(const Position& current,
+                   int currentG,
+                   const Grid3D& grid,
+                   const vector<Position>& neighbors,
+                   bool canTransitionFloors,
+                   HeuristicFn&& heuristicFn,
+                   bool isStartNode) {
+    (void)current;
+    (void)canTransitionFloors;
+    if (!isStartNode) return;
+    lastTrace.immediateSuccessors.clear();
+    for (const auto& neighbor : neighbors) {
+        int tentativeG = currentG + grid.getMovementCost(current, neighbor);
+        float h = heuristicFn(neighbor, tentativeG);
+        lastTrace.immediateSuccessors.push_back(makeNode(neighbor, tentativeG, h));
+    }
 }
+} // namespace
 
-vector<Node> AStar3D::getSuccessorLog() {
-    return lastTrace.immediateSuccessors;
-}
+const SearchTrace& AStar3D::getLastSearchTrace() { return lastTrace; }
+vector<Node> AStar3D::getSuccessorLog() { return lastTrace.immediateSuccessors; }
+void AStar3D::clearLastSearchTrace() { lastTrace = SearchTrace(); }
 
-void AStar3D::clearLastSearchTrace() {
-    lastTrace = SearchTrace();
-}
-
+// ─────────────────────────────────────────────────────────────────────────────
+//  findPath  — initialG carries the agent's lifetime step count into g(n)
+// ─────────────────────────────────────────────────────────────────────────────
 vector<Position> AStar3D::findPath(const Position& start,
                                    const Position& goal,
                                    const Grid3D& grid,
                                    GoalType goalType,
-                                   bool canTransitionFloors) {
+                                   bool canTransitionFloors,
+                                   int initialG) {          // <-- new param
     clearLastSearchTrace();
     lastTrace.start = start;
     lastTrace.goal = goal;
@@ -47,19 +61,14 @@ vector<Position> AStar3D::findPath(const Position& start,
 
     Node startNode;
     startNode.pos = start;
-    startNode.g = 0;
+    startNode.g = initialG;                                  // <-- was 0
     startNode.h = grid.manhattanDistance(start, goal);
-    startNode.f = startNode.h;
-
-    for (const auto& neighbor : grid.getNeighbors(start, canTransitionFloors)) {
-        int g = maneuverCost(start, neighbor, grid);
-        float h = grid.manhattanDistance(neighbor, goal);
-        lastTrace.immediateSuccessors.push_back(makeNode(neighbor, g, h));
-    }
+    startNode.f = startNode.g + startNode.h;
 
     openSet.push(startNode);
-    gScore[start] = 0;
+    gScore[start] = initialG;                                // <-- was 0
 
+    bool isFirstExpansion = true;
     while (!openSet.empty()) {
         Node current = openSet.top();
         openSet.pop();
@@ -81,7 +90,14 @@ vector<Position> AStar3D::findPath(const Position& start,
         if (closedSet.count(current.pos)) continue;
         closedSet.insert(current.pos);
 
-        for (const auto& neighbor : grid.getNeighbors(current.pos, canTransitionFloors)) {
+        const vector<Position> neighbors = grid.getNeighbors(current.pos, canTransitionFloors);
+        logSuccessors(current.pos, gScore[current.pos], grid, neighbors, canTransitionFloors,
+                      [&](const Position& neighbor, int /*tentativeG*/) {
+                          return grid.manhattanDistance(neighbor, goal);
+                      }, isFirstExpansion);
+        isFirstExpansion = false;
+
+        for (const auto& neighbor : neighbors) {
             if (closedSet.count(neighbor)) continue;
 
             int tentativeG = gScore[current.pos] + maneuverCost(current.pos, neighbor, grid);
@@ -100,12 +116,12 @@ vector<Position> AStar3D::findPath(const Position& start,
         }
     }
 
-    if (!lastTrace.immediateSuccessors.empty()) {
-        lastTrace.chosenNode = lastTrace.immediateSuccessors.front().pos;
-    }
     return vector<Position>();
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  findPathWithHeuristic  — same initialG treatment
+// ─────────────────────────────────────────────────────────────────────────────
 vector<Position> AStar3D::findPathWithHeuristic(const Position& start,
                                                 const Position& goal,
                                                 const Grid3D& grid,
@@ -115,7 +131,8 @@ vector<Position> AStar3D::findPathWithHeuristic(const Position& start,
                                                 GoalType goalType,
                                                 const vector<Position>& obstacles,
                                                 bool isRobberPerspective,
-                                                bool canTransitionFloors) {
+                                                bool canTransitionFloors,
+                                                int initialG) {          // <-- new param
     clearLastSearchTrace();
     lastTrace.start = start;
     lastTrace.goal = goal;
@@ -130,25 +147,17 @@ vector<Position> AStar3D::findPathWithHeuristic(const Position& start,
 
     Node startNode;
     startNode.pos = start;
-    startNode.g = 0;
-    startNode.h = heuristic.compute(startNode, goalType, world, rules);
-    startNode.f = startNode.h;
-
-    for (const auto& neighbor : grid.getNeighbors(start, canTransitionFloors)) {
-        int g = maneuverCost(start, neighbor, grid);
-        Node temp;
-        temp.pos = neighbor;
-        temp.g = g;
-        temp.h = heuristic.compute(temp, goalType, world, rules);
-        lastTrace.immediateSuccessors.push_back(makeNode(neighbor, g, temp.h));
-    }
+    startNode.g = initialG;                                  // <-- was 0
+    startNode.h = grid.manhattanDistance(start, goal);
+    startNode.f = startNode.g + startNode.h;
 
     openSet.push(startNode);
-    gScore[start] = 0;
+    gScore[start] = initialG;                                // <-- was 0
 
     int iterations = 0;
     const int MAX_ITERATIONS = 5000;
 
+    bool isFirstExpansion = true;
     while (!openSet.empty() && iterations < MAX_ITERATIONS) {
         iterations++;
         Node current = openSet.top();
@@ -171,7 +180,14 @@ vector<Position> AStar3D::findPathWithHeuristic(const Position& start,
         if (closedSet.count(current.pos)) continue;
         closedSet.insert(current.pos);
 
-        for (const auto& neighbor : grid.getNeighbors(current.pos, canTransitionFloors)) {
+        const vector<Position> neighbors = grid.getNeighbors(current.pos, canTransitionFloors);
+        logSuccessors(current.pos, gScore[current.pos], grid, neighbors, canTransitionFloors,
+                      [&](const Position& neighbor, int /*tentativeG*/) {
+                          return grid.manhattanDistance(neighbor, goal);
+                      }, isFirstExpansion);
+        isFirstExpansion = false;
+
+        for (const auto& neighbor : neighbors) {
             if (closedSet.count(neighbor)) continue;
 
             int tentativeG = gScore[current.pos] + maneuverCost(current.pos, neighbor, grid);
@@ -181,20 +197,16 @@ vector<Position> AStar3D::findPathWithHeuristic(const Position& start,
                 Node nextNode;
                 nextNode.pos = neighbor;
                 nextNode.g = tentativeG;
-                nextNode.h = heuristic.compute(nextNode, goalType, world, rules);
+                nextNode.h = grid.manhattanDistance(neighbor, goal);
                 nextNode.f = nextNode.g + nextNode.h;
                 openSet.push(nextNode);
             }
         }
     }
 
-    if (!lastTrace.immediateSuccessors.empty()) {
-        lastTrace.chosenNode = lastTrace.immediateSuccessors.front().pos;
-    }
     return vector<Position>();
 }
 
-int AStar3D::maneuverCost(const Position& from, const Position& to,
-                         const Grid3D& grid) {
+int AStar3D::maneuverCost(const Position& from, const Position& to, const Grid3D& grid) {
     return grid.getMovementCost(from, to);
 }

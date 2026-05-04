@@ -40,7 +40,7 @@ private:
     static constexpr int gridStartY = 20;
 
     Grid3D grid;
-    unique_ptr<RobberAI> robber;
+    vector<unique_ptr<RobberAI>> robbers;
     vector<unique_ptr<PoliceAI>> policeList;
     int controlledPoliceIndex;
     unique_ptr<HeuristicEngine> heuristic;
@@ -61,10 +61,15 @@ private:
     pid_t debugWindowPid;
     string debugSnapshotPath;
     vector<string> debugSnapshotPaths;
-    // track robber last position to detect first-move-on-floor events
+    vector<string> robberDebugSnapshotPaths;
+    vector<pid_t> robberDebugWindowPids;
+    // track robber last positions to detect first-move-on-floor events
     Position lastRobberPos;
-    // track multiple debug windows per police (optional)
     vector<pid_t> debugWindowPids;
+    // Alert teleportation state (only for police user mode)
+    bool alertTriggered;
+    Position alertTeleportPos;
+    int alertMovesLeft;
 
     // Input tracking
     Position hoveredCell;
@@ -85,8 +90,10 @@ public:
     bool processRobberFirstTurnInPoliceMode();
     string buildDebugSnapshot() const;
     string buildDebugSnapshotForPolice(int idx) const;
+    string buildDebugSnapshotForRobber(int idx) const;
     void spawnDebugWindow();
     void stopDebugWindow();
+    void spawnDebugWindowForRobber(int index, const string &path);
 
     bool tryMovePlayer(const Position &targetPos);
     bool isControllableMoveValid(const Position &targetPos) const;

@@ -19,17 +19,10 @@ int selectDifficulty() {
 }
 
 PlayerRole selectRole() {
-    int choice;
-    cout << "\n\033[1mSelect Your Role:\033[0m\n";
+    cout << "\n\033[1mPlayer Role:\033[0m\n";
     cout << "1. \033[32mRobber\033[0m - Navigate to vault, grab loot, escape (Manual)\n";
-    cout << "2. \033[33mPolice\033[0m - Catch the robber (AI plays robber)\n";
-    cout << "\nEnter choice (1-2): ";
+    cout << "\nNote: Police mode is currently disabled (AI-only)\n";
     
-    cin >> choice;
-    
-    if (choice == 2) {
-        return PlayerRole::POLICE;
-    }
     return PlayerRole::ROBBER;
 }
 
